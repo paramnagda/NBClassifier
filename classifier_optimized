@@ -1,0 +1,112 @@
+import nltk.classify.util
+from nltk.classify import NaiveBayesClassifier
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import WordNetLemmatizer
+from autocorrect import spell
+import re
+import os
+import random
+import time
+
+def main ():
+    start_time=time.time()
+    rootdir="Enron Spam"
+
+    ham_train_list = [] # to store the training ham emails
+    spam_train_list = [] # to store the training spam emails
+    ham_test_list = [] # to store the testing ham emails
+    spam_test_list = [] # to store the testing spam emails
+
+    checkpoint_time1=time.time()
+    print("time elapsed=", (checkpoint_time1-start_time))
+    print("training in progress...")
+    print("processing training files...")
+
+    for directories, subdirs, files in os.walk(rootdir):
+
+        if (os.path.split(directories)[1]=="ham"):
+            for file in files:
+                with open(os.path.join(directories, file), encoding="latin-1") as f:
+                    data = f.read()
+                    words = word_tokenize(data)
+                    ham_train_list.append((create_word_features(words), "ham"))
+            print("file end time check")
+            checkpoint_time2=time.time()
+            print("time elapsed=", (checkpoint_time2-start_time))
+
+        if (os.path.split(directories)[1]=="spam"):
+            for file in files:
+                with open(os.path.join(directories, file), encoding="latin-1") as f:
+                    data=f.read()
+                    words = word_tokenize(data)
+                    spam_train_list.append((create_word_features(words), "spam"))
+            print("file end time check")
+            checkpoint_time3=time.time()
+            print("time elapsed=", (checkpoint_time3-start_time))
+
+    print("processing testing files...")
+    checkpoint_time4=time.time()
+    print("time elapsed=", (checkpoint_time4-start_time))
+
+    rootdir="Testing Dataset 600"
+
+    for directories, subdirs, files in os.walk(rootdir):
+
+           if (os.path.split(directories)[1]=="ham"):
+               for file in files:
+                   with open(os.path.join(directories, file), encoding="latin-1") as f:
+                       data = f.read()
+                       words = word_tokenize(data)
+                       ham_test_list.append((create_word_features(words)))
+               print("file end time check")
+               checkpoint_time2=time.time()
+               print("time elapsed=", (checkpoint_time2-start_time))
+
+           if (os.path.split(directories)[1]=="spam"):
+               for file in files:
+                   with open(os.path.join(directories, file), encoding="latin-1") as f:
+                       data=f.read()
+                       words = word_tokenize(data)
+                       spam_test_list.append((create_word_features(words)))
+               print("file end time check")
+               checkpoint_time3=time.time()
+               print("time elapsed=", (checkpoint_time3-start_time))
+
+    training_set=ham_train_list+spam_train_list # to store the complete training dataset
+    testing_set=ham_test_list+spam_test_list # to store complete training dataset
+
+    print("checkpoint 3")
+    checkpoint_time5=time.time()
+    print("time elapsed=", (checkpoint_time3-start_time))
+
+    classifier = NaiveBayesClassifier.train(training_set)
+
+    x=1
+    fp=0
+    fn=0
+    for mail in testing_set:
+        dist = classifier.prob_classify(mail)
+        spam_prob=dist.prob("spam")
+        if (spam_prob>0.9):
+            print(x,": spam")
+            if(x<=300):
+                fp=fp+1
+
+        else:
+            print(x,": ham")
+            if(x>300):
+                fn=fn+1
+        x+=1
+
+    print("Accuracy:", (((600-(fp+fn))/600)*100), "%")
+
+    print("total time=", time.time()-start_time, "seconds")
+
+def create_word_features(words):
+    my_dict = dict([(re.sub(r'(.)\1+', r'\1\1', word)), True) for word in words])
+    return my_dict
+
+if __name__ == "__main__":
+    print("classifier is running...")
+    main()
